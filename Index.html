@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#0f172a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Duke St Bins" />
+  <title>Duke St Bin Day — Northam</title>
+  <script>
+    // Inline PWA Manifest so GitHub Pages installs with a single file
+    const manifest = {
+      name: "Duke St Bin Day",
+      short_name: "Duke St Bins",
+      start_url: "./",
+      display: "standalone",
+      background_color: "#0f172a",
+      theme_color: "#0f172a",
+      icons: [{
+        src: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='42' fill='%230f172a'/><circle cx='66' cy='96' r='34' fill='%2322c55e'/><circle cx='126' cy='96' r='34' fill='%23eab308'/></svg>",
+        sizes: "192x192",
+        type: "image/svg+xml"
+      }]
+    };
+    const link = document.createElement('link');
+    link.rel = 'manifest';
+    link.href = 'data:application/manifest+json;charset=utf-8,' + encodeURIComponent(JSON.stringify(manifest));
+    document.head.appendChild(link);
+  </script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --green: #22c55e;
+      --yellow: #eab308;
+      --accent: #38bdf8;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 20px 16px 48px; }
+    .container { max-width: 460px; margin: 0 auto; }
+    header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    h1 { font-size: 1.25rem; margin: 0; }
+    .sub { font-size: 0.85rem; color: var(--muted); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+    .badge { display: inline-block; background: rgba(56, 189, 248, 0.15); color: var(--accent); font-size: 0.8rem; font-weight: 600; padding: 4px 10px; border-radius: 999px; margin-bottom: 10px; }
+    .bins-row { display: flex; gap: 16px; justify-content: center; margin: 22px 0; }
+    .bin-dot { width: 72px; height: 72px; border-radius: 50%; display: flex; flex-direction: column; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; color: #090d16; }
+    .bin-green { background: var(--green); box-shadow: 0 0 24px rgba(34, 197, 94, 0.45); }
+    .bin-yellow { background: var(--yellow); box-shadow: 0 0 24px rgba(234, 179, 8, 0.45); }
+    .bin-off { background: #0f172a; border: 2px dashed var(--border); color: var(--muted); box-shadow: none; }
+    .preview-box { background: #0f172a; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; font-size: 0.9rem; margin-top: 12px; }
+    button { width: 100%; border: none; border-radius: 12px; padding: 14px; font-size: 0.95rem; font-weight: 600; cursor: pointer; margin-top: 10px; }
+    .btn-primary { background: var(--accent); color: #090d16; }
+    .btn-secondary { background: #334155; color: var(--text); }
+    .row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .row:last-child { border-bottom: none; }
+    input[type="time"] { background: #0f172a; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px; font-size: 0.95rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div>
+        <h1>Duke St Bin Day</h1>
+        <div class="sub">Northam • Thursdays before 6:00 AM</div>
+      </div>
+      <button class="btn-secondary" style="width:auto;padding:8px 12px;margin:0;font-size:0.8rem;" onclick="flipCycle()">Flip Cycle</button>
+    </header>
+
+    <div class="card" style="text-align:center;">
+      <div id="countdownBadge" class="badge">Loading...</div>
+      <div id="nextDateText" style="font-size:1.35rem;font-weight:700;"></div>
+      <div class="bins-row">
+        <div class="bin-dot bin-green">GENERAL<br>RUBBISH</div>
+        <div id="yellowDot" class="bin-dot bin-yellow">YELLOW<br>RECYCLE</div>
+      </div>
+      <div id="binSummary" style="font-weight:600;"></div>
+      <div class="preview-box" id="notifPreview"></div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:6px;">Wednesday Notification Bar Alert</div>
+      <div class="sub" style="margin-bottom:12px;">Adds alternating fortnightly reminders to your phone's notification bar every Wednesday.</div>
+      <div class="row">
+        <span>Wednesday Reminder Time</span>
+        <input type="time" id="reminderTime" value="17:00" onchange="render()" />
+      </div>
+      <button class="btn-primary" onclick="downloadICS()">Add Recurring Wednesday Alert to Phone (.ics)</button>
+      <button class="btn-secondary" onclick="testNotification()">Test Notification Now</button>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:8px;">Upcoming 8 Weeks</div>
+      <div id="scheduleList"></div>
+    </div>
+  </div>
+
+  <script>
+    // Anchor: Thursday Nov 26, 2026 = Both Bins (Green + Yellow)
+    const ANCHOR_MS = new Date(2026, 10, 26, 12, 0, 0).getTime();
+    const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
+    let offset = Number(localStorage.getItem('dukeStOffset') || 0);
+
+    function isRecyclingWeek(thursdayDate) {
+      const target = new Date(thursdayDate.getFullYear(), thursdayDate.getMonth(), thursdayDate.getDate(), 12, 0, 0).getTime();
+      const weeksDiff = Math.round((target - ANCHOR_MS) / MS_PER_WEEK);
+      return Math.abs(weeksDiff + offset) % 2 === 0;
+    }
+
+    function getUpcomingThursday(fromDate = new Date()) {
+      const d = new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate(), 12, 0, 0);
+      const day = d.getDay(); // 0=Sun ... 4=Thu
+      const diff = (4 - day + 7) % 7;
+      d.setDate(d.getDate() + diff);
+      return d;
+    }
+
+    function formatDate(d) {
+      return d.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+
+    function flipCycle() {
+      offset = offset === 0 ? 1 : 0;
+      localStorage.setItem('dukeStOffset', offset);
+      render();
+    }
+
+    function render() {
+      const now = new Date();
+      const nextThu = getUpcomingThursday(now);
+      const recycle = isRecyclingWeek(nextThu);
+      const day = now.getDay();
+
+      let badge = '';
+      if (day === 4) badge = 'Today is Bin Day! (Before 6:00 AM)';
+      else if (day === 3) badge = 'Bin Night Tonight (Wednesday)';
+      else {
+        const daysAway = (4 - day + 7) % 7;
+        badge = `In ${daysAway} day${daysAway === 1 ? '' : 's'}`;
+      }
+
+      document.getElementById('countdownBadge').textContent = badge;
+      document.getElementById('nextDateText').textContent = nextThu.toLocaleDateString('en-AU', { weekday: 'long', day: 'numeric', month: 'long' });
+
+      const yellowEl = document.getElementById('yellowDot');
+      if (recycle) {
+        yellowEl.className = 'bin-dot bin-yellow';
+        yellowEl.innerHTML = 'YELLOW<br>RECYCLE';
+        document.getElementById('binSummary').textContent = '🟢🟡 Both Bins Out (General + Recycling)';
+        document.getElementById('notifPreview').textContent = 'Wednesday Alert: 🟢🟡 Bin Night Tomorrow (Duke St): General + Recycling';
+      } else {
+        yellowEl.className = 'bin-dot bin-off';
+        yellowEl.innerHTML = 'NO<br>RECYCLE';
+        document.getElementById('binSummary').textContent = '🟢 General Rubbish Only';
+        document.getElementById('notifPreview').textContent = 'Wednesday Alert: 🟢 Bin Night Tomorrow (Duke St): General Rubbish only';
+      }
+
+      const list = document.getElementById('scheduleList');
+      list.innerHTML = '';
+      for (let i = 0; i < 8; i++) {
+        const thu = new Date(nextThu);
+        thu.setDate(nextThu.getDate() + i * 7);
+        const wed = new Date(thu);
+        wed.setDate(thu.getDate() - 1);
+        const rec = isRecyclingWeek(thu);
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.innerHTML = `<span><strong>${formatDate(thu)}</strong> <span class="sub">(Alert ${formatDate(wed)})</span></span><span>${rec ? '🟢🟡 Both' : '🟢 General'}</span>`;
+        list.appendChild(row);
+      }
+    }
+
+    function testNotification() {
+      const nextThu = getUpcomingThursday();
+      const rec = isRecyclingWeek(nextThu);
+      const title = rec ? '🟢🟡 Bin Night Tomorrow (Duke St)' : '🟢 Bin Night Tomorrow (Duke St)';
+      const body = rec ? 'Put out General Rubbish + Yellow Recycling before 6:00 AM.' : 'Put out General Rubbish only before 6:00 AM.';
+      if ('Notification' in window) {
+        Notification.requestPermission().then(perm => {
+          if (perm === 'granted') new Notification(title, { body });
+          else alert(title + '\n' + body);
+        });
+      } else {
+        alert(title + '\n' + body);
+      }
+    }
+
+    function downloadICS() {
+      const timeVal = document.getElementById('reminderTime').value || '17:00';
+      const [hh, mm] = timeVal.split(':');
+      const nextThu = getUpcomingThursday();
+      const firstWed = new Date(nextThu);
+      firstWed.setDate(nextThu.getDate() - 1);
+      const secondWed = new Date(firstWed);
+      secondWed.setDate(firstWed.getDate() + 7);
+
+      const firstRec = isRecyclingWeek(nextThu);
+      const pad = n => String(n).padStart(2, '0');
+      const fmtICS = d => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${hh}${mm}00`;
+
+      const ev1Summary = firstRec ? '🟢🟡 Bin Night Tomorrow (Duke St): General + Recycling' : '🟢 Bin Night Tomorrow (Duke St): General Rubbish only';
+      const ev2Summary = !firstRec ? '🟢🟡 Bin Night Tomorrow (Duke St): General + Recycling' : '🟢 Bin Night Tomorrow (Duke St): General Rubbish only';
+
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//DukeStBins//Northam//EN',
+        'BEGIN:VEVENT',
+        `UID:dukest-weeka-${Date.now()}@northam`,
+        `DTSTAMP:${fmtICS(new Date())}`,
+        `DTSTART:${fmtICS(firstWed)}`,
+        'RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=WE',
+        `SUMMARY:${ev1Summary}`,
+        'BEGIN:VALARM',
+        'TRIGGER:-PT0M',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${ev1Summary}`,
+        'END:VALARM',
+        'END:VEVENT',
+        'BEGIN:VEVENT',
+        `UID:dukest-weekb-${Date.now()}@northam`,
+        `DTSTAMP:${fmtICS(new Date())}`,
+        `DTSTART:${fmtICS(secondWed)}`,
+        'RRULE:FREQ=WEEKLY;INTERVAL=2;BYDAY=WE',
+        `SUMMARY:${ev2Summary}`,
+        'BEGIN:VALARM',
+        'TRIGGER:-PT0M',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${ev2Summary}`,
+        'END:VALARM',
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'duke-st-bins.ics';
+      a.click();
+    }
+
+    render();
+  </script>
+</body>
+</html>
